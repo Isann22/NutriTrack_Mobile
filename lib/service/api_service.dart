@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 class ApiService {
   static String get _baseUrl {
     if (Platform.isAndroid) {
-      return 'http://10.195.87.219:5000/api/food';
+      return 'http://10.0.2.2:5000/api/food';
     } else if (Platform.isIOS) {
       return 'http://127.0.0.1:5000/api/food';
     } else {

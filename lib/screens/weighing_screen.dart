@@ -81,7 +81,7 @@ class _WeighingScreenState extends State<WeighingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
             Chip(
               label: Text(
                 widget.mealType,

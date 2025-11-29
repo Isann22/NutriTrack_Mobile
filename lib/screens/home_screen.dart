@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../model/tracking_data.dart';
 import '../service/api_service.dart';
+import 'input_food_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,6 +19,12 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _todayLogFuture = _fetchTodayLog();
+  }
+
+  void _refreshData() {
+    setState(() {
+      _todayLogFuture = _fetchTodayLog();
+    });
   }
 
   Future<DailyLog?> _fetchTodayLog() async {
@@ -59,13 +66,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
             if (snapshot.hasError) {
               return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Text(
-                    'Gagal memuat data: ${snapshot.error}',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.signika(color: Colors.red),
-                  ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Gagal memuat data',
+                      style: GoogleFonts.signika(color: Colors.red),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: _refreshData,
+                    ),
+                  ],
                 ),
               );
             }
@@ -78,7 +90,8 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _Header(), // Header sama seperti WeightScreen
+                  // Kirim fungsi refresh ke Header
+                  _Header(onRefresh: _refreshData),
                   const SizedBox(height: 30),
                   _buildCalorieSummaryCard(summary),
                   const SizedBox(height: 40),
@@ -215,53 +228,68 @@ class _HomeScreenState extends State<HomeScreen> {
     required String title,
     required List<FoodLogItem> items,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: GoogleFonts.signika(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: AppTheme.nutrinTrackGreen,
-          ),
-        ),
-        const SizedBox(height: 8),
-        if (items.isEmpty)
-          Text(
-            '(Belum ada data)',
-            style: GoogleFonts.signika(
-              fontSize: 15,
-              color: Colors.grey.shade500,
-              fontStyle: FontStyle.italic,
-            ),
-          )
-        else
-          ...items.map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 4.0),
-              child: Text(
-                '• ${item.displayString}',
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF2F9EB),
+        borderRadius: BorderRadius.circular(18.0),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                title,
                 style: GoogleFonts.signika(
-                  fontSize: 15,
-                  color: Colors.grey.shade700,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textColor,
+                ),
+              ),
+              const Spacer(),
+            ],
+          ),
+
+          if (items.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ...items.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 4.0),
+                child: Text(
+                  '• ${item.displayString}',
+                  style: GoogleFonts.signika(
+                    fontSize: 14,
+                    color: Colors.grey.shade700,
+                  ),
                 ),
               ),
             ),
-          ),
-      ],
+          ] else
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text(
+                'Belum ada data',
+                style: GoogleFonts.signika(
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.grey.shade400,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
 
-// Widget header disalin dari WeightScreen
 class _Header extends StatelessWidget {
-  const _Header();
+  final VoidCallback onRefresh; // Terima fungsi refresh
+
+  const _Header({required this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
-    final Color lightTextColor = Colors.grey.shade600;
-
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -270,7 +298,7 @@ class _Header extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Halo!',
+              'Hello Chan!',
               style: GoogleFonts.signika(
                 fontSize: 26,
                 fontWeight: FontWeight.bold,
@@ -280,17 +308,17 @@ class _Header extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'Temukan, lacak, makan makanan sehatmu.',
-              style: GoogleFonts.signika(fontSize: 14, color: lightTextColor),
+              style: GoogleFonts.signika(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+              ),
             ),
           ],
         ),
+        // Tombol Refresh
         IconButton(
-          onPressed: () {},
-          icon: Icon(
-            Icons.notifications_none_rounded,
-            color: Colors.grey.shade500,
-            size: 30,
-          ),
+          onPressed: onRefresh,
+          icon: Icon(Icons.refresh, color: Colors.grey.shade500, size: 30),
         ),
       ],
     );

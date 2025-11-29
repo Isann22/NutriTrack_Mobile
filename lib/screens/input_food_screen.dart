@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:translator/translator.dart';
@@ -14,14 +16,41 @@ class InputFoodScreen extends StatefulWidget {
 }
 
 class _InputFoodScreenState extends State<InputFoodScreen> {
-  final _foodNameController = TextEditingController();
+  TextEditingController? _autocompleteController;
   final _pageController = PageController();
-
-  // State untuk loading terjemahan
   bool _isTranslating = false;
 
+  List<String> _foodOptions = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFoodData();
+  }
+
+  Future<void> _loadFoodData() async {
+    try {
+      // 1. Baca file JSON dari assets
+      final String response = await rootBundle.loadString(
+        'assets/data/foods.json',
+      );
+
+      // 2. Decode JSON menjadi List
+      final List<dynamic> data = json.decode(response);
+
+      // 3. Masukkan ke variabel state
+      setState(() {
+        _foodOptions = data.cast<String>();
+      });
+    } catch (e) {
+      debugPrint("Gagal memuat data makanan: $e");
+    }
+  }
+
   void _goToNextStep() async {
-    if (_foodNameController.text.isEmpty || _isTranslating) return;
+    final text = _autocompleteController?.text ?? '';
+
+    if (text.isEmpty || _isTranslating) return;
 
     setState(() {
       _isTranslating = true;
@@ -29,9 +58,8 @@ class _InputFoodScreenState extends State<InputFoodScreen> {
 
     try {
       final translator = GoogleTranslator();
-      final foodDisplay = _foodNameController.text;
+      final foodDisplay = text;
 
-      // Terjemahkan dari Indonesia (id) ke Inggris (en)
       final translation = await translator.translate(
         foodDisplay,
         from: 'id',
@@ -40,14 +68,13 @@ class _InputFoodScreenState extends State<InputFoodScreen> {
       final foodApi = translation.text;
 
       if (mounted) {
-        // Kirim kedua versi nama ke layar berikutnya
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => WeighingScreen(
               mealType: widget.mealType,
-              foodNameDisplay: foodDisplay, // Untuk ditampilkan
-              foodNameApi: foodApi, // Untuk dikirim ke API
+              foodNameDisplay: foodDisplay,
+              foodNameApi: foodApi,
             ),
           ),
         );
@@ -78,7 +105,7 @@ class _InputFoodScreenState extends State<InputFoodScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        iconTheme: IconThemeData(color: AppTheme.textColor),
+        iconTheme: const IconThemeData(color: AppTheme.textColor),
         title: Text(
           'NutriTrack',
           style: GoogleFonts.signika(
@@ -94,9 +121,9 @@ class _InputFoodScreenState extends State<InputFoodScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(height: 90),
+              Center(child: const SizedBox(height: 40)),
               Text(
-                'Apa nama makanan kamu?',
+                'Apa nama \n makanan kamu?',
                 style: GoogleFonts.signika(
                   fontSize: 28,
                   fontWeight: FontWeight.w600,
@@ -105,43 +132,107 @@ class _InputFoodScreenState extends State<InputFoodScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 30),
-              TextField(
-                controller: _foodNameController,
-                style: GoogleFonts.signika(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w500,
-                  color: AppTheme.textColor,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Cth: Roti Gandum',
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(
-                      color: AppTheme.nutrinTrackGreen,
-                      width: 2,
+
+              Autocomplete<String>(
+                optionsBuilder: (TextEditingValue textEditingValue) {
+                  if (textEditingValue.text == '') {
+                    return const Iterable<String>.empty();
+                  }
+                  return _foodOptions.where((String option) {
+                    return option.toLowerCase().contains(
+                      textEditingValue.text.toLowerCase(),
+                    );
+                  });
+                },
+
+                onSelected: (String selection) {
+                  debugPrint('Kamu memilih: $selection');
+                },
+
+                optionsViewBuilder: (context, onSelected, options) {
+                  return Align(
+                    alignment: Alignment.topLeft,
+                    child: Material(
+                      elevation: 4.0,
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        width: 300,
+                        color: Colors.white,
+                        constraints: const BoxConstraints(maxHeight: 250),
+                        child: ListView.builder(
+                          padding: EdgeInsets.zero,
+                          shrinkWrap: true,
+                          itemCount: options.length,
+                          itemBuilder: (BuildContext context, int index) {
+                            final String option = options.elementAt(index);
+                            return ListTile(
+                              title: Text(
+                                option,
+                                style: GoogleFonts.signika(
+                                  color: AppTheme.textColor,
+                                ),
+                              ),
+                              onTap: () {
+                                onSelected(option);
+                              },
+                            );
+                          },
+                        ),
+                      ),
                     ),
-                  ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(
-                      color: AppTheme.nutrinTrackGreen,
-                      width: 3,
-                    ),
-                  ),
-                ),
+                  );
+                },
+
+                fieldViewBuilder:
+                    (
+                      BuildContext context,
+                      TextEditingController fieldTextEditingController,
+                      FocusNode fieldFocusNode,
+                      VoidCallback onFieldSubmitted,
+                    ) {
+                      _autocompleteController = fieldTextEditingController;
+
+                      return TextField(
+                        controller: fieldTextEditingController,
+                        focusNode: fieldFocusNode,
+                        style: GoogleFonts.signika(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textColor,
+                        ),
+                        decoration: const InputDecoration(
+                          hintText: 'Cth: Roti Gandum',
+                          enabledBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(
+                              color: AppTheme.nutrinTrackGreen,
+                              width: 2,
+                            ),
+                          ),
+                          focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(
+                              color: AppTheme.nutrinTrackGreen,
+                              width: 3,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
               ),
+
               const Spacer(),
               Center(
                 child: SmoothPageIndicator(
                   controller: _pageController,
                   count: 2,
-                  effect: ExpandingDotsEffect(
-                    dotColor: Colors.grey.shade300,
+                  effect: const ExpandingDotsEffect(
+                    dotColor: Colors.grey,
                     activeDotColor: AppTheme.activeDotPink,
                     dotHeight: 10,
                     dotWidth: 10,
                   ),
                 ),
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: 40),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.buttonGreen,
@@ -152,7 +243,14 @@ class _InputFoodScreenState extends State<InputFoodScreen> {
                 ),
                 onPressed: _goToNextStep,
                 child: _isTranslating
-                    ? const CircularProgressIndicator(color: Colors.white)
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 3,
+                        ),
+                      )
                     : Text(
                         'Lanjut',
                         style: GoogleFonts.signika(

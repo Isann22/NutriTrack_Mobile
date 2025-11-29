@@ -26,7 +26,7 @@ class NutritionInfo {
 class FoodLogItem {
   final String name;
   final int gram;
-  final String mealType; // Tipe makanan (Sarapan, Makan Siang, dll)
+  final String mealType;
   final NutritionInfo nutrition;
 
   FoodLogItem({
@@ -84,13 +84,11 @@ class DailySummary {
 class DailyLog {
   final DateTime date;
   final DailySummary summary;
-  // Model diubah agar sesuai dengan struktur 'log: { "Sarapan": [...] }'
   final Map<String, List<FoodLogItem>> log;
 
   DailyLog({required this.date, required this.summary, required this.log});
 
   factory DailyLog.fromJson(Map<String, dynamic> json) {
-    // Fungsi ini sekarang meneruskan 'mealTypeKey' ke 'FoodLogItem.fromJson'
     Map<String, List<FoodLogItem>> parseLog(Map<String, dynamic> logMap) {
       Map<String, List<FoodLogItem>> parsed = {};
       logMap.forEach((mealTypeKey, itemList) {
@@ -121,12 +119,10 @@ class DailyLog {
 
   String get formattedDate => DateFormat('d MMMM yyyy', 'id_ID').format(date);
 
-  // Helper untuk mengambil data log (dibuat case-insensitive)
-  // Ini akan mencari 'Sarapan', 'sarapan', 'SARAPAN', dll.
   List<FoodLogItem> _getItemsForMeal(String meal) {
     final key = log.keys.firstWhere(
       (k) => k.toLowerCase() == meal.toLowerCase(),
-      orElse: () => '', // Mengembalikan string kosong jika tidak ditemukan
+      orElse: () => '',
     );
     return key.isEmpty ? [] : log[key]!;
   }
