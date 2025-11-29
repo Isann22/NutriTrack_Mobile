@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:tubes_pemod/screens/login_screen.dart';
 import 'package:tubes_pemod/screens/main_navigation_screen.dart';
 import '../theme/app_theme.dart';
+import '../service/api_service.dart';
 
 class OnboardingItem {
   final String image;
@@ -30,6 +32,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   // 1. Variabel untuk melacak halaman
   int _currentPage = 0;
 
+  void _finishOnboardingAndNavigate() async {
+    // 1. Simpan status bahwa onboarding sudah dilihat
+    await ApiService.completeOnboarding();
+
+    if (mounted) {
+      // 2. Pindah ke Login Screen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
+    }
+  }
+
   final List<OnboardingItem> _pages = [
     OnboardingItem(
       image: 'assets/svg/onboarding1.svg',
@@ -54,6 +69,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
+    );
+  }
+
+  void _navigateToLogin() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
     );
   }
 
@@ -133,7 +155,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 // 3. Perbaiki logika tombol "Mulai"
                 onPressed: () {
                   if (_currentPage == _pages.length - 1) {
-                    // Jika di halaman terakhir, navigasi ke home
+                    _finishOnboardingAndNavigate();
                     _navigateToMainApp();
                   } else {
                     // Jika tidak, pindah ke halaman berikutnya
@@ -170,7 +192,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   TextButton(
                     // 4. Perbaiki panggilan fungsi tombol "Masuk"
                     onPressed: () {
-                      _navigateToMainApp();
+                      _navigateToLogin();
                     },
                     style: TextButton.styleFrom(
                       padding: EdgeInsets.zero,
