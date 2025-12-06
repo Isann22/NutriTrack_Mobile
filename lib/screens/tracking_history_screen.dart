@@ -110,7 +110,7 @@ class _DayLogCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 2.0,
-      shadowColor: Colors.grey.withOpacity(0.1),
+      shadowColor: Colors.grey.withValues(alpha: 0.1),
       margin: const EdgeInsets.only(bottom: 16.0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.0)),
       child: Padding(

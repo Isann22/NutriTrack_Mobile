@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -33,20 +32,6 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ),
             const Spacer(flex: 3),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text(
-                  "Pemograman Mobile CC",
-                  style: GoogleFonts.nunito(
-                    color: Colors.white54,
-                    fontSize: 25,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 40),
           ],
         ),
       ),

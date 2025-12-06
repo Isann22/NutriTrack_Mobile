@@ -22,7 +22,6 @@ class MainApp extends StatelessWidget {
       Future.delayed(const Duration(seconds: 3)),
     ]);
 
-    // Ambil hasil pengecekan
     final bool isLoggedIn = results[0] as bool;
     final bool hasSeenOnboarding = results[1] as bool;
 

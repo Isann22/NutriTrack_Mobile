@@ -25,7 +25,6 @@ class ApiService {
     return value == 'true';
   }
 
-  // Tandai bahwa onboarding sudah selesai
   static Future<void> completeOnboarding() async {
     await _storage.write(key: _onboardingKey, value: 'true');
   }

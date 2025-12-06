@@ -91,7 +91,9 @@ class _WeighingScreenState extends State<WeighingScreen> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              backgroundColor: AppTheme.nutrinTrackGreen.withOpacity(0.15),
+              backgroundColor: AppTheme.nutrinTrackGreen.withValues(
+                alpha: 0.15,
+              ),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             ),
             const Spacer(),
@@ -180,7 +182,7 @@ class _WeighingScreenState extends State<WeighingScreen> {
               borderRadius: BorderRadius.circular(30),
               boxShadow: [
                 BoxShadow(
-                  color: purpleGlow.withOpacity(0.7),
+                  color: purpleGlow.withValues(alpha: 0.7),
                   blurRadius: 10.0,
                   spreadRadius: 2.0,
                 ),
@@ -192,7 +194,7 @@ class _WeighingScreenState extends State<WeighingScreen> {
                 color: Colors.black87,
                 borderRadius: BorderRadius.circular(30),
                 border: Border.all(
-                  color: purpleGlow.withOpacity(0.5),
+                  color: purpleGlow.withValues(alpha: 0.5),
                   width: 1.5,
                 ),
               ),

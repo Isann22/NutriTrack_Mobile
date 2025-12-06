@@ -3,7 +3,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:tubes_pemod/screens/login_screen.dart';
-import 'package:tubes_pemod/screens/main_navigation_screen.dart';
 import '../theme/app_theme.dart';
 import '../service/api_service.dart';
 
@@ -29,15 +28,12 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _pageController = PageController();
 
-  // 1. Variabel untuk melacak halaman
   int _currentPage = 0;
 
   void _finishOnboardingAndNavigate() async {
-    // 1. Simpan status bahwa onboarding sudah dilihat
     await ApiService.completeOnboarding();
 
     if (mounted) {
-      // 2. Pindah ke Login Screen
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -64,13 +60,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           'Dengan alat IOT yang menakjubkan Anda dapat melacak kemajuan Anda.',
     ),
   ];
-
-  void _navigateToMainApp() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
-    );
-  }
 
   void _navigateToLogin() {
     Navigator.pushReplacement(
@@ -152,13 +141,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   elevation: 0,
                 ),
-                // 3. Perbaiki logika tombol "Mulai"
                 onPressed: () {
                   if (_currentPage == _pages.length - 1) {
                     _finishOnboardingAndNavigate();
-                    _navigateToMainApp();
                   } else {
-                    // Jika tidak, pindah ke halaman berikutnya
                     _pageController.nextPage(
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeIn,
@@ -166,7 +152,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   }
                 },
                 child: Text(
-                  // Ubah teks tombol berdasarkan halaman
                   _currentPage == _pages.length - 1 ? 'Mulai' : 'Lanjut',
                   style: const TextStyle(
                     fontSize: 18,
@@ -184,13 +169,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   Text(
                     'Sudah punya akun? ',
                     style: GoogleFonts.signika(
-                      color: AppTheme.textColor.withOpacity(0.8),
+                      color: AppTheme.textColor.withValues(alpha: 0.8),
                       fontWeight: FontWeight.w400,
                       fontSize: 16,
                     ),
                   ),
                   TextButton(
-                    // 4. Perbaiki panggilan fungsi tombol "Masuk"
                     onPressed: () {
                       _navigateToLogin();
                     },

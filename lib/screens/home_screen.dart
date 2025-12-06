@@ -113,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       padding: const EdgeInsets.all(24.0),
       decoration: BoxDecoration(
-        color: AppTheme.nutrinTrackGreen.withOpacity(0.08),
+        color: AppTheme.nutrinTrackGreen.withValues(alpha: .08),
         borderRadius: BorderRadius.circular(20.0),
       ),
       child: Column(
@@ -297,7 +297,7 @@ class _Header extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Hello Chan!',
+              'Halo',
               style: GoogleFonts.signika(
                 fontSize: 26,
                 fontWeight: FontWeight.bold,
