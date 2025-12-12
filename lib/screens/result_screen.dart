@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import './main_navigation_screen.dart'; // Import Main Screen
 
 class ResultScreen extends StatelessWidget {
   final Map<String, dynamic> resultData;
@@ -16,22 +17,17 @@ class ResultScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String foodName = foodNameDisplay;
-
-    // Data berat dari API
     final int gram = (resultData['portionSize_g'] ?? 0.0).toInt();
 
-    // Data nutrisi dari API
     final Map<String, dynamic> nutrition = resultData['nutrition'] ?? {};
-    final double calories = nutrition['calories_kcal'] ?? 0.0;
-    final double protein = nutrition['protein_g'] ?? 0.0;
-    final double fat = nutrition['fat_total_g'] ?? 0.0;
-    final double carbs = nutrition['carbohydrates_g'] ?? 0.0;
+    final double calories = (nutrition['calories_kcal'] ?? 0.0).toDouble();
+    final double protein = (nutrition['protein_g'] ?? 0.0).toDouble();
+    final double fat = (nutrition['fat_total_g'] ?? 0.0).toDouble();
+    final double carbs = (nutrition['carbohydrates_g'] ?? 0.0).toDouble();
 
     final String detailsText =
-        "Satu porsi $foodName (sekitar ${gram}g) "
-        "mengandung ${calories.toStringAsFixed(0)} kalori, "
-        "${fat.toStringAsFixed(0)} gram lemak, "
-        "${carbs.toStringAsFixed(0)} gram karbohidrat, "
+        "Satu porsi $foodName (sekitar ${gram}g) mengandung ${calories.toStringAsFixed(0)} kalori, "
+        "${fat.toStringAsFixed(0)} gram lemak, ${carbs.toStringAsFixed(0)} gram karbohidrat, "
         "dan ${protein.toStringAsFixed(0)} gram protein.";
 
     return Scaffold(
@@ -42,11 +38,16 @@ class ResultScreen extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.close, color: AppTheme.textColor),
           onPressed: () {
-            Navigator.of(context).popUntil((route) => route.isFirst);
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (context) => const MainNavigationScreen(),
+              ),
+              (route) => false,
+            );
           },
         ),
         title: Text(
-          'Kandungan Nutrisi',
+          'Deteksi Makanan',
           style: GoogleFonts.signika(
             color: AppTheme.nutrinTrackGreen,
             fontWeight: FontWeight.w600,
@@ -84,6 +85,7 @@ class ResultScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
 
+            // Tampilkan teks dinamis di sini
             Text(
               detailsText,
               style: GoogleFonts.signika(
@@ -105,11 +107,19 @@ class ResultScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(18),
             ),
           ),
+          // 3. Auto Refresh saat tombol Selesai ditekan
           onPressed: () {
-            Navigator.of(context).popUntil((route) => route.isFirst);
+            // Kembali ke MainNavigationScreen dan hapus semua stack
+            // Ini memaksa initState di MainNavigationScreen berjalan lagi -> Data Refreshed
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (context) => const MainNavigationScreen(),
+              ),
+              (route) => false,
+            );
           },
           child: Text(
-            'Kembali',
+            'Selesai',
             style: GoogleFonts.signika(
               fontSize: 18,
               fontWeight: FontWeight.bold,

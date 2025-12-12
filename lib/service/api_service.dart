@@ -4,15 +4,17 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:tubes_pemod/model/user_model.dart';
 import 'package:flutter/foundation.dart';
+import 'package:tubes_pemod/model/recommendation_model.dart';
 
 class ApiService {
   static const _storage = FlutterSecureStorage();
   static const _tokenKey = 'jwt_token';
   static const _onboardingKey = 'has_seen_onboarding';
+  static const _tutorialKey = 'has_seen_dashboard_tutorial';
 
   static String get _baseUrl {
     if (Platform.isAndroid) {
-      return 'http://10.0.2.2:5000/api';
+      return 'http://10.178.23.219:5000/api';
     } else if (Platform.isIOS) {
       return 'http://127.0.0.1:5000/api/food';
     } else {
@@ -27,6 +29,15 @@ class ApiService {
 
   static Future<void> completeOnboarding() async {
     await _storage.write(key: _onboardingKey, value: 'true');
+  }
+
+  static Future<bool> shouldShowDashboardTutorial() async {
+    String? value = await _storage.read(key: _tutorialKey);
+    return value != 'true';
+  }
+
+  static Future<void> completeDashboardTutorial() async {
+    await _storage.write(key: _tutorialKey, value: 'true');
   }
 
   // api/auth/
@@ -106,7 +117,9 @@ class ApiService {
     final uri = Uri.parse('$_baseUrl/user/profile');
     final headers = await _getAuthHeaders();
 
-    final response = await http.get(uri, headers: headers);
+    final response = await http
+        .get(uri, headers: headers)
+        .timeout(const Duration(seconds: 15));
     if (response.statusCode == 200) {
       return UserProfile.fromJson(json.decode(response.body));
     } else {
@@ -169,7 +182,7 @@ class ApiService {
     try {
       final response = await http
           .post(uri, headers: headers, body: body)
-          .timeout(const Duration(seconds: 15));
+          .timeout(const Duration(seconds: 60));
 
       if (response.statusCode == 200) {
         return json.decode(response.body);
@@ -199,6 +212,65 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Gagal terhubung ke server: $e');
+    }
+  }
+
+  static Future<RecData> getAIRecommendation({
+    required int age,
+    required double weight,
+    required double height, // dalam meter (misal 1.75)
+    required String genderIndo, // "Laki-laki" / "Perempuan"
+    required String activityIndo, // "Jarang Gerak", "Aktif", dll
+    required String goalIndo, // "Turun Berat", "Menaikkan Otot"
+  }) async {
+    final uri = Uri.parse('$_baseUrl/recommendation');
+    final headers = {'Content-Type': 'application/json'};
+
+    String genderAPI = genderIndo == "Laki-laki" ? "M" : "F";
+
+    String activityAPI = "Sedentary";
+    if (activityIndo == "Aktif Ringan")
+      activityAPI = "Lightly Active";
+    else if (activityIndo == "Aktif")
+      activityAPI = "Active";
+    else if (activityIndo == "Sangat Aktif")
+      activityAPI = "Very Active";
+
+    String goalAPI = "Maintain";
+    if (goalIndo == "Turunkan Berat")
+      goalAPI = "Lose Weight";
+    else if (goalIndo == "Naikkan Berat")
+      goalAPI = "Gain Weight";
+    else if (goalIndo == "Pertahankan Berat")
+      goalAPI = "Weight";
+
+    // 2. Buat Body JSON
+    final body = json.encode({
+      "age": age,
+      "weight": weight,
+      "height":
+          height, // Pastikan dikirim dalam meter/cm sesuai backend (biasanya meter 1.75)
+      "gender": genderAPI,
+      "activity_level": activityAPI,
+      "weight_goal": goalAPI,
+    });
+
+    try {
+      final response = await http
+          .post(uri, headers: headers, body: body)
+          .timeout(const Duration(seconds: 20)); // AI mungkin butuh waktu
+
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(response.body);
+        // Parsing ke Model
+        return RecommendationResponse.fromJson(jsonResponse).data;
+      } else {
+        throw Exception(
+          'Gagal mendapatkan rekomendasi: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      throw Exception('Error koneksi AI: $e');
     }
   }
 }

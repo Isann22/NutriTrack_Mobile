@@ -61,13 +61,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
   ];
 
-  void _navigateToLogin() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
-    );
-  }
-
   @override
   void dispose() {
     _pageController.dispose();
@@ -176,7 +169,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   TextButton(
                     onPressed: () {
-                      _navigateToLogin();
+                      _finishOnboardingAndNavigate();
                     },
                     style: TextButton.styleFrom(
                       padding: EdgeInsets.zero,

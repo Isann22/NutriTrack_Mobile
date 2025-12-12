@@ -4,11 +4,13 @@ import '../theme/app_theme.dart';
 class CustomBottomNavBar extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onItemTapped;
+  final GlobalKey? profileKey;
 
   const CustomBottomNavBar({
     super.key,
     required this.selectedIndex,
     required this.onItemTapped,
+    this.profileKey,
   });
 
   @override
@@ -16,7 +18,7 @@ class CustomBottomNavBar extends StatelessWidget {
     return BottomAppBar(
       color: Colors.white,
       elevation: 10,
-      shadowColor: Colors.black.withValues(alpha: 101),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       child: SizedBox(
         height: 60,
         child: Row(
@@ -27,7 +29,7 @@ class CustomBottomNavBar extends StatelessWidget {
                   ? Icons.home_filled
                   : Icons.home_outlined,
               index: 0,
-              text: "Beranda"
+              text: "Beranda",
             ),
 
             _buildNavItem(
@@ -35,12 +37,14 @@ class CustomBottomNavBar extends StatelessWidget {
                   ? Icons.monitor_weight
                   : Icons.monitor_weight_outlined,
               index: 1,
-                text: "Analisis"
+              text: "Analisis",
             ),
+
             _buildNavItem(
               icon: selectedIndex == 2 ? Icons.person : Icons.person_outline,
               index: 2,
-                text: "Profil"
+              text: "Profil",
+              key: profileKey,
             ),
           ],
         ),
@@ -48,11 +52,17 @@ class CustomBottomNavBar extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem({required IconData icon, required int index,required String text}) {
+  Widget _buildNavItem({
+    required IconData icon,
+    required int index,
+    required String text,
+    GlobalKey? key,
+  }) {
     return InkWell(
+      key: key,
       onTap: () => onItemTapped(index),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 0.0),
+        padding: const EdgeInsets.symmetric(vertical: 0.0, horizontal: 10),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
@@ -72,7 +82,7 @@ class CustomBottomNavBar extends StatelessWidget {
                 fontWeight: FontWeight.bold,
                 color: selectedIndex == index
                     ? AppTheme.nutrinTrackGreen
-                    : Colors.grey.shade400
+                    : Colors.grey.shade400,
               ),
             ),
           ],

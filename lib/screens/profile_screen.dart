@@ -1,72 +1,89 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:tubes_pemod/screens/login_screen.dart';
 import '../theme/app_theme.dart';
 import '../service/api_service.dart';
-import './onboarding_screen.dart';
+import '../model/user_model.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final UserProfile? userProfile;
+  final VoidCallback onProfileUpdated;
+
+  const ProfileScreen({
+    super.key,
+    required this.userProfile,
+    required this.onProfileUpdated,
+  });
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // Status Loading
-  bool _isLoading = true;
+  bool _isLoading = false;
 
-  final _nameController = TextEditingController();
-  final _weightController = TextEditingController();
-  final _heightController = TextEditingController();
+  late TextEditingController _nameController;
+  late TextEditingController _weightController;
+  late TextEditingController _heightController;
 
-  final _calController = TextEditingController();
-  final _protController = TextEditingController();
-  final _fatController = TextEditingController();
-  final _carbController = TextEditingController();
+  late TextEditingController _calController;
+  late TextEditingController _protController;
+  late TextEditingController _fatController;
+  late TextEditingController _carbController;
 
   @override
   void initState() {
     super.initState();
-    _loadProfileData();
+    _initControllers();
   }
 
-  // 1. Ambil Data dari API & Masukkan ke Controller
-  void _loadProfileData() async {
-    try {
-      final user = await ApiService.getUserProfile();
+  void _initControllers() {
+    final user = widget.userProfile;
+    _nameController = TextEditingController(text: user?.name ?? '');
+    _weightController = TextEditingController(
+      text: user?.weight.toString() ?? '0',
+    );
+    _heightController = TextEditingController(
+      text: user?.height.toString() ?? '0',
+    );
 
-      setState(() {
-        // Data Fisik
-        _nameController.text = user.name;
-        _weightController.text = user.weight.toString();
-        _heightController.text = user.height.toString();
+    final t = user?.targets;
+    _calController = TextEditingController(
+      text: t?.calories.toString() ?? '2000',
+    );
+    _protController = TextEditingController(
+      text: t?.protein.toString() ?? '120',
+    );
+    _fatController = TextEditingController(text: t?.fat.toString() ?? '70');
+    _carbController = TextEditingController(text: t?.carbs.toString() ?? '250');
+  }
 
-        // Data Target
-        _calController.text = user.targets.calories.toString();
-        _protController.text = user.targets.protein.toString();
-        _fatController.text = user.targets.fat.toString();
-        _carbController.text = user.targets.carbs.toString();
-
-        _isLoading = false;
-      });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Gagal memuat data: $e"),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+  @override
+  void didUpdateWidget(covariant ProfileScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Update controller jika data dari parent berubah (misal setelah refresh)
+    if (oldWidget.userProfile != widget.userProfile) {
+      _initControllers();
     }
   }
 
-  // 2. Simpan Semua Perubahan
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _weightController.dispose();
+    _heightController.dispose();
+    _calController.dispose();
+    _protController.dispose();
+    _fatController.dispose();
+    _carbController.dispose();
+    super.dispose();
+  }
+
   void _saveAllChanges() async {
     setState(() => _isLoading = true);
 
     try {
-      // Update Profil
+      // 1. Update Profil Fisik
       await ApiService.updateUserProfile(
         _nameController.text,
         int.tryParse(_weightController.text) ?? 0,
@@ -76,6 +93,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         int.tryParse(_fatController.text) ?? 0,
         int.tryParse(_carbController.text) ?? 0,
       );
+
+      widget.onProfileUpdated();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -101,12 +120,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _handleLogout() async {
     await ApiService.logout();
-    if (mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-        (route) => false,
-      );
-    }
+    if (!mounted) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+      (route) => false,
+    );
   }
 
   @override
@@ -144,7 +163,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- BAGIAN 1: DATA FISIK ---
             _buildSectionTitle("Data Pribadi"),
             const SizedBox(height: 15),
             _buildTextField("Nama Lengkap", _nameController),
@@ -171,11 +189,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 30),
 
-            // --- BAGIAN 2: TARGET NUTRISI ---
             _buildSectionTitle("Target Nutrisi Harian"),
             const SizedBox(height: 5),
             Text(
-              "Sesuaikan target ini agar AI bekerja lebih akurat.",
+              "Sesuaikan target ini agar indikator bekerja akurat.",
               style: GoogleFonts.signika(color: Colors.grey, fontSize: 13),
             ),
             const SizedBox(height: 15),
@@ -216,7 +233,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 40),
 
-            // --- TOMBOL SIMPAN ---
             SizedBox(
               width: double.infinity,
               height: 55,

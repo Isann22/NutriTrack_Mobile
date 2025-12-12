@@ -2,10 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../model/tracking_data.dart';
+import '../model/user_model.dart';
 import '../service/api_service.dart';
+import './recommendation_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final UserProfile? userProfile;
+  final VoidCallback onRefreshProfile;
+
+  const HomeScreen({
+    super.key,
+    required this.userProfile,
+    required this.onRefreshProfile,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -20,10 +29,11 @@ class _HomeScreenState extends State<HomeScreen> {
     _todayLogFuture = _fetchTodayLog();
   }
 
-  void _refreshData() {
+  void _refreshAllData() {
     setState(() {
       _todayLogFuture = _fetchTodayLog();
     });
+    widget.onRefreshProfile();
   }
 
   Future<DailyLog?> _fetchTodayLog() async {
@@ -43,81 +53,142 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       return null;
     } catch (e) {
-      rethrow;
+      return null;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final int targetCalories = widget.userProfile?.targets.calories ?? 2000;
+    final String userName = widget.userProfile?.name ?? "User";
+
     return Scaffold(
       backgroundColor: Colors.white,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const AiRecommendationScreen(),
+            ),
+          );
+        },
+        backgroundColor: const Color(0xFF8A98DE),
+        icon: const Icon(Icons.auto_awesome, color: Colors.white),
+        label: Text(
+          "Tanya AI",
+          style: GoogleFonts.signika(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      ),
       body: SafeArea(
-        child: FutureBuilder<DailyLog?>(
-          future: _todayLogFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(
-                  color: AppTheme.nutrinTrackGreen,
+        child: RefreshIndicator(
+          onRefresh: () async => _refreshAllData(),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _HomeHeader(userName: userName, onRefresh: _refreshAllData),
+                const SizedBox(height: 30),
+                FutureBuilder<DailyLog?>(
+                  future: _todayLogFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          color: AppTheme.nutrinTrackGreen,
+                        ),
+                      );
+                    }
+
+                    final dailyLog = snapshot.data;
+                    final summary = dailyLog?.summary;
+
+                    return Column(
+                      children: [
+                        _SimpleSummaryCard(
+                          summary: summary,
+                          target: targetCalories,
+                        ),
+                        const SizedBox(height: 40),
+                        _TodayFoodLog(dailyLog: dailyLog),
+                      ],
+                    );
+                  },
                 ),
-              );
-            }
-
-            if (snapshot.hasError) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Gagal memuat data',
-                      style: GoogleFonts.signika(color: Colors.red),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.refresh),
-                      onPressed: _refreshData,
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            final dailyLog = snapshot.data;
-            final summary = dailyLog?.summary;
-
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Kirim fungsi refresh ke Header
-                  _Header(onRefresh: _refreshData),
-                  const SizedBox(height: 30),
-                  _buildCalorieSummaryCard(summary),
-                  const SizedBox(height: 40),
-                  _buildTodayFoodLog(dailyLog),
-                ],
-              ),
-            );
-          },
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildCalorieSummaryCard(DailySummary? summary) {
+// --- WIDGETS ---
+
+class _SimpleSummaryCard extends StatelessWidget {
+  final DailySummary? summary;
+  final int target;
+
+  const _SimpleSummaryCard({required this.summary, required this.target});
+
+  @override
+  Widget build(BuildContext context) {
     final double caloriesEaten = summary?.totalCaloriesKcal ?? 0.0;
-    final double protein = summary?.totalProteinG ?? 0.0;
-    final double fat = summary?.totalFatG ?? 0.0;
-    final double carbs = summary?.totalCarbsG ?? 0.0;
+
+    final double remaining = target - caloriesEaten;
+
+    String statusText;
+    Color statusColor;
+    String detailText;
+
+    if (remaining < 0) {
+      statusText = "Melebihi";
+      statusColor = Colors.redAccent;
+      detailText = "Lewat: ${remaining.abs().toStringAsFixed(0)} kkal";
+    } else if (remaining <= 300) {
+      statusText = "Terpenuhi";
+      statusColor = AppTheme.nutrinTrackGreen;
+      detailText = "Sisa: ${remaining.toStringAsFixed(0)} kkal (Ideal)";
+    } else {
+      statusText = "Kurang";
+      statusColor = Colors.orange;
+      detailText = "Sisa: ${remaining.toStringAsFixed(0)} kkal";
+    }
+
+    final double progress = (caloriesEaten / target).clamp(0.0, 1.0);
 
     return Container(
       padding: const EdgeInsets.all(24.0),
       decoration: BoxDecoration(
-        color: AppTheme.nutrinTrackGreen.withValues(alpha: .08),
+        color: statusColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(20.0),
       ),
       child: Column(
         children: [
+          // Badge Status
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: statusColor,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              statusText,
+              style: GoogleFonts.signika(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
           SizedBox(
             width: 150,
             height: 150,
@@ -129,8 +200,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   strokeWidth: 12.0,
                   backgroundColor: Colors.grey.shade200,
                   valueColor: const AlwaysStoppedAnimation<Color>(
-                    AppTheme.buttonGreen,
+                    Colors.transparent,
                   ),
+                ),
+                CircularProgressIndicator(
+                  value: progress,
+                  strokeWidth: 12.0,
+                  backgroundColor: Colors.transparent,
+                  valueColor: AlwaysStoppedAnimation<Color>(statusColor),
                 ),
                 Center(
                   child: Column(
@@ -145,9 +222,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       Text(
-                        'kkal',
+                        '/ $target kkal',
                         style: GoogleFonts.signika(
-                          fontSize: 16,
+                          fontSize: 14,
                           color: Colors.grey.shade600,
                         ),
                       ),
@@ -157,15 +234,28 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 24),
-          Divider(height: 1, color: Colors.grey.shade200),
+
           const SizedBox(height: 16),
+          Text(
+            detailText,
+            style: GoogleFonts.signika(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: statusColor,
+            ),
+          ),
+
+          const SizedBox(height: 24),
+          const Divider(height: 1, color: Colors.grey),
+          const SizedBox(height: 16),
+
+          // Makronutrien
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildMacroItem("Protein", protein),
-              _buildMacroItem("Lemak", fat),
-              _buildMacroItem("Karbo", carbs),
+              _buildMacroItem("Protein", summary?.totalProteinG ?? 0.0),
+              _buildMacroItem("Lemak", summary?.totalFatG ?? 0.0),
+              _buildMacroItem("Karbo", summary?.totalCarbsG ?? 0.0),
             ],
           ),
         ],
@@ -178,30 +268,23 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Text(
           title,
-          style: GoogleFonts.signika(
-            fontSize: 15,
-            color: Colors.grey.shade600,
-            fontWeight: FontWeight.w500,
-          ),
+          style: GoogleFonts.signika(fontSize: 14, color: Colors.grey),
         ),
-        const SizedBox(height: 4),
         Text(
           '${value.toStringAsFixed(0)}g',
-          style: GoogleFonts.signika(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.textColor,
-          ),
+          style: GoogleFonts.signika(fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ],
     );
   }
+}
 
-  Widget _buildTodayFoodLog(DailyLog? dailyLog) {
-    final sarapanItems = dailyLog?.sarapan ?? [];
-    final siangItems = dailyLog?.makanSiang ?? [];
-    final malamItems = dailyLog?.makanMalam ?? [];
+class _TodayFoodLog extends StatelessWidget {
+  final DailyLog? dailyLog;
+  const _TodayFoodLog({required this.dailyLog});
 
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -214,21 +297,33 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         const SizedBox(height: 20),
-        _buildMealLogCategory(title: 'Sarapan', items: sarapanItems),
+        _MealCategoryCard(title: 'Sarapan', items: dailyLog?.sarapan ?? []),
         const SizedBox(height: 16),
-        _buildMealLogCategory(title: 'Makan Siang', items: siangItems),
+        _MealCategoryCard(
+          title: 'Makan Siang',
+          items: dailyLog?.makanSiang ?? [],
+        ),
         const SizedBox(height: 16),
-        _buildMealLogCategory(title: 'Makan Malam', items: malamItems),
+        _MealCategoryCard(
+          title: 'Makan Malam',
+          items: dailyLog?.makanMalam ?? [],
+        ),
       ],
     );
   }
+}
 
-  Widget _buildMealLogCategory({
-    required String title,
-    required List<FoodLogItem> items,
-  }) {
+class _MealCategoryCard extends StatelessWidget {
+  final String title;
+  final List<FoodLogItem> items;
+
+  const _MealCategoryCard({required this.title, required this.items});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
         color: const Color(0xFFF2F9EB),
         borderRadius: BorderRadius.circular(18.0),
@@ -236,25 +331,19 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
-                title,
-                style: GoogleFonts.signika(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textColor,
-                ),
-              ),
-              const Spacer(),
-            ],
+          Text(
+            title,
+            style: GoogleFonts.signika(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textColor,
+            ),
           ),
-
-          if (items.isNotEmpty) ...[
-            const SizedBox(height: 8),
+          const SizedBox(height: 10),
+          if (items.isNotEmpty)
             ...items.map(
               (item) => Padding(
-                padding: const EdgeInsets.only(bottom: 4.0),
+                padding: const EdgeInsets.only(bottom: 6.0),
                 child: Text(
                   '• ${item.displayString}',
                   style: GoogleFonts.signika(
@@ -263,17 +352,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-            ),
-          ] else
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: Text(
-                'Belum ada data',
-                style: GoogleFonts.signika(
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
-                  color: Colors.grey.shade400,
-                ),
+            )
+          else
+            Text(
+              'Belum ada data',
+              style: GoogleFonts.signika(
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                color: Colors.grey.shade400,
               ),
             ),
         ],
@@ -282,22 +368,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _Header extends StatelessWidget {
-  final VoidCallback onRefresh; // Terima fungsi refresh
-
-  const _Header({required this.onRefresh});
+class _HomeHeader extends StatelessWidget {
+  final String userName;
+  final VoidCallback onRefresh;
+  const _HomeHeader({required this.userName, required this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Halo',
+              'Hello $userName!',
               style: GoogleFonts.signika(
                 fontSize: 26,
                 fontWeight: FontWeight.bold,
@@ -306,18 +391,14 @@ class _Header extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Temukan, lacak, makan makanan sehatmu.',
-              style: GoogleFonts.signika(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-              ),
+              'Pantau kalori harianmu.',
+              style: GoogleFonts.signika(fontSize: 14, color: Colors.grey),
             ),
           ],
         ),
-        // Tombol Refresh
         IconButton(
+          icon: const Icon(Icons.notifications_none),
           onPressed: onRefresh,
-          icon: Icon(Icons.refresh, color: Colors.grey.shade500, size: 30),
         ),
       ],
     );
